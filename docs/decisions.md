@@ -81,3 +81,37 @@ Initial overlap confidence is primarily based on RANSAC evidence:
 
 These thresholds remain provisional and will be evaluated using the topology
 of the overlap graph.
+
+## TD-004 — Rotation is not an overlap rejection criterion
+
+**Status:** Accepted
+
+Initial discovery used an absolute rotation limit of 20 degrees. Graph
+analysis revealed that this incorrectly excluded genuine overlaps.
+
+High-quality examples include verified overlaps with rotations of approximately
+-41, -49, and -63 degrees. These pairs retain hundreds to thousands of RANSAC
+inliers, high inlier ratios, and estimated image scales close to 1.0.
+
+Rotation therefore describes acquisition geometry rather than match quality
+and is retained as transform metadata but is not used as a discovery rejection
+criterion.
+
+Overlap screening continues to use descriptor evidence, RANSAC support,
+inlier ratio, and physically plausible image scale.
+
+## TD-005 — High-confidence overlap graph is globally connected
+
+**Status:** Accepted
+
+After removing rotation as an overlap rejection criterion, the verified
+high-confidence overlap graph contains all 173 microscope images in a single
+connected component.
+
+The high-confidence graph contains 572 usable edges, with every image having
+at least two high-confidence neighbours.
+
+Medium-confidence overlaps are therefore not required to establish global
+connectivity. Global layout initialization will use high-confidence overlaps
+as the primary geometric backbone, while medium-confidence edges may later be
+used for validation or additional constraints.
