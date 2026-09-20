@@ -291,6 +291,30 @@ def main() -> None:
 
     discovery_df = pd.DataFrame(records)
 
+    discovery_df["candidate"] = (
+        (
+            discovery_df["mutual_matches"]
+            >= criteria.min_mutual_matches
+        )
+        & (
+            discovery_df["ransac_inliers"]
+            >= criteria.min_inliers
+        )
+        & (
+            discovery_df["inlier_ratio"]
+            >= criteria.min_inlier_ratio
+        )
+        & discovery_df["estimated_scale"].between(
+            criteria.min_scale,
+            criteria.max_scale,
+        )
+    )
+
+    discovery_df.to_csv(
+        args.discovery_output,
+        index=False,
+    )
+
     candidate_df = discovery_df[
         discovery_df["candidate"] == True
     ].copy()

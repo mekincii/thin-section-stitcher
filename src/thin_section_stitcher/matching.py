@@ -71,7 +71,6 @@ class DiscoveryCriteria:
     min_inlier_ratio: float = 0.50
     min_scale: float = 0.95
     max_scale: float = 1.05
-    max_abs_rotation_deg: float = 20.0
 
 
 @dataclass(slots=True, frozen=True)
@@ -315,14 +314,12 @@ def is_plausible_overlap(
         return False
 
     return (
-        matches.mutual_count >= criteria.min_mutual_matches
-        and geometry.inliers >= criteria.min_inliers
-        and geometry.inlier_ratio >= criteria.min_inlier_ratio
-        and criteria.min_scale
-        <= geometry.scale
-        <= criteria.max_scale
-        and abs(geometry.rotation_deg)
-        <= criteria.max_abs_rotation_deg
+            matches.mutual_count >= criteria.min_mutual_matches
+            and geometry.inliers >= criteria.min_inliers
+            and geometry.inlier_ratio >= criteria.min_inlier_ratio
+            and criteria.min_scale
+            <= geometry.scale
+            <= criteria.max_scale
     )
 
 
