@@ -112,6 +112,8 @@ def build_overlap_graph(
             translation_error_px=float(row["translation_error_px"]),
             rotation_error_deg=float(row["rotation_error_deg"]),
             scale_error=float(row["scale_error"]),
+            image_a=str(row["image_a"]),
+            image_b=str(row["image_b"]),
         )
 
     return graph

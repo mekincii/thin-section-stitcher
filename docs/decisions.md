@@ -115,3 +115,41 @@ Medium-confidence overlaps are therefore not required to establish global
 connectivity. Global layout initialization will use high-confidence overlaps
 as the primary geometric backbone, while medium-confidence edges may later be
 used for validation or additional constraints.
+
+## TD-006 — Global layout uses rigid pose-graph optimization
+
+**Status:** Accepted
+
+The verified high-confidence overlap graph contains 173 images and 572
+trusted edges.
+
+An initial global layout is constructed from a maximum-confidence spanning
+tree. Image 60.jpg is used as the fixed reference pose. Pairwise transforms
+are propagated through the tree to obtain an initial pose for every image.
+
+The initial layout is then refined using all high-confidence overlap edges
+simultaneously with robust nonlinear least-squares optimization.
+
+Global image poses are modeled as rigid 2D transforms:
+
+- translation in x
+- translation in y
+- rotation
+
+Per-image scale is not optimized because all microscope images were acquired
+under the same optical configuration. Small estimated pairwise scale
+differences are treated as registration noise.
+
+The optimized solution remains geometrically close to the spanning-tree
+initialization while substantially reducing loop-closure error.
+
+For 400 non-tree high-confidence overlap constraints:
+
+- median center-position error decreased from approximately 1.78 px to 0.91 px
+- 90th percentile decreased from approximately 5.09 px to 2.48 px
+- 95th percentile decreased from approximately 7.03 px to 3.29 px
+- 99th percentile decreased from approximately 9.43 px to 4.54 px
+- maximum rotation disagreement decreased from approximately 0.275° to 0.116°
+
+The working-resolution global registration is therefore considered
+sufficiently consistent to proceed to mosaic rendering.
