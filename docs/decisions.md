@@ -153,3 +153,18 @@ For 400 non-tree high-confidence overlap constraints:
 
 The working-resolution global registration is therefore considered
 sufficiently consistent to proceed to mosaic rendering.
+
+## TD-007 — Full-resolution global rematching is not required
+
+**Status:** Accepted
+
+Local full-resolution inspection of representative overlap pairs confirmed
+that the optimized global poses align geological structures closely.
+
+The validation set included strong ordinary overlaps, high-rotation overlaps,
+and the largest remaining global loop-closure residual. Even the worst
+examined case remained locally well registered.
+
+A global full-resolution rematching pass is therefore not justified at this
+stage. Full-resolution refinement will be applied selectively only if later
+mosaic inspection exposes a problematic local seam.
