@@ -63,6 +63,14 @@ def parse_args() -> argparse.Namespace:
         default=64.0,
     )
 
+    parser.add_argument(
+        "--tiff-output",
+        type=Path,
+        default=Path(
+            "outputs/raw_mosaic_preview.tif"
+        ),
+    )
+
     return parser.parse_args()
 
 
@@ -142,6 +150,20 @@ def main() -> None:
         else 0.0
     )
 
+    args.tiff_output.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    if not cv2.imwrite(
+            str(args.tiff_output),
+            result.mosaic,
+    ):
+        raise RuntimeError(
+            f"Could not save TIFF: "
+            f"{args.tiff_output}"
+        )
+
     print()
     print("=" * 72)
     print("RENDER COMPLETE")
@@ -172,6 +194,11 @@ def main() -> None:
     print(
         f"Coverage: "
         f"{args.coverage_output.resolve()}"
+    )
+
+    print(
+        f"TIFF: "
+        f"{args.tiff_output.resolve()}"
     )
 
 
