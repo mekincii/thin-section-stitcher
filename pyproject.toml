@@ -11,7 +11,8 @@ dependencies = [
     "networkx",
     "matplotlib",
     "scipy",
-    "tqdm"
+    "tqdm",
+    "tifffile"
 ]
 
 [project.optional-dependencies]
