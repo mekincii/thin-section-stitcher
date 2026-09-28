@@ -168,3 +168,32 @@ examined case remained locally well registered.
 A global full-resolution rematching pass is therefore not justified at this
 stage. Full-resolution refinement will be applied selectively only if later
 mosaic inspection exposes a problematic local seam.
+
+## TD-008 — Independent hand mosaic supports the automatic reconstruction
+
+**Status:** Accepted
+
+An independently hand-stitched reconstruction was registered to the automatic
+mosaic as an external comparison.
+
+A global similarity transformation produced:
+
+- 1,731 RANSAC inliers
+- median mosaic-registration residual of approximately 5.47 px
+- 95.5% coverage of the automatic specimen
+- 99.2% coverage of the registered hand specimen
+
+Allowing a full affine transformation improved the median residual to
+approximately 4.00 px and increased the inlier count to 1,784.
+
+The additional affine deformation was small:
+
+- scale anisotropy approximately 1.0024
+- shear departure approximately 0.213 degrees
+
+The hand and automatic reconstructions therefore agree strongly in overall
+specimen geometry. The remaining disagreement is predominantly local rather
+than evidence of a large global geometric distortion.
+
+The hand reconstruction is treated as an independent reference rather than
+ground truth.
