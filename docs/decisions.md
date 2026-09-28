@@ -197,3 +197,54 @@ than evidence of a large global geometric distortion.
 
 The hand reconstruction is treated as an independent reference rather than
 ground truth.
+
+## TD-009 — Final photometric and rendering pipeline
+
+**Status:** Accepted
+
+The final mosaic uses the optimized rigid global image layout without
+additional geometric warping.
+
+Frame-to-frame illumination differences are standardized using photometric
+constraints measured from trusted image overlaps.
+
+A shared quadratic illumination field is fitted independently for the B, G,
+and R channels. Adding the shared spatial field reduced the median overlap
+photometric residual by approximately:
+
+- 44.7% for blue
+- 36.9% for green
+- 41.0% for red
+
+After accounting for the shared field, regularized per-image multiplicative
+corrections remained moderate:
+
+- blue: approximately 0.909–1.287
+- green: approximately 0.922–1.351
+- red: approximately 0.888–1.337
+
+Spatial illumination correction is capped at 1.5x to prevent aggressive
+extrapolation near source-frame boundaries.
+
+Overlapping images are combined using feather weighting with:
+
+- feather fraction: 0.15
+- minimum source-frame weight: 0.05
+
+The final mosaic is rendered tile-by-tile at original source resolution to
+avoid the memory requirements of a full-resolution floating-point
+accumulator.
+
+Final mosaic dimensions:
+
+- 24,695 x 22,204 pixels
+- approximately 548 megapixels
+- RGB uint8 TIFF
+- approximately 1.53 GiB
+
+Six independent 1536 x 1536 native-resolution crops were inspected directly
+from the final TIFF. No obvious stitching discontinuities, duplicated
+features, tile-boundary artefacts, or major photometric seams were observed.
+
+The final TIFF is therefore accepted as the primary reconstructed
+thin-section image deliverable.

@@ -12,6 +12,10 @@ from thin_section_stitcher.dataset import (
 from thin_section_stitcher.mosaic import (
     render_average_mosaic,
 )
+from thin_section_stitcher.photometric import (
+    apply_photometric_calibration,
+    load_photometric_calibration,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -71,6 +75,45 @@ def parse_args() -> argparse.Namespace:
         ),
     )
 
+    parser.add_argument(
+        "--photometric-gains",
+        type=Path,
+        default=None,
+    )
+
+    parser.add_argument(
+        "--photometric-field",
+        type=Path,
+        default=None,
+    )
+
+    parser.add_argument(
+        "--max-field-correction",
+        type=float,
+        default=1.5,
+    )
+
+    parser.add_argument(
+        "--blend-mode",
+        choices=[
+            "average",
+            "feather",
+        ],
+        default="average",
+    )
+
+    parser.add_argument(
+        "--feather-fraction",
+        type=float,
+        default=0.15,
+    )
+
+    parser.add_argument(
+        "--minimum-feather-weight",
+        type=float,
+        default=0.05,
+    )
+
     return parser.parse_args()
 
 
@@ -103,11 +146,92 @@ def main() -> None:
         f"Layout: {args.layout}"
     )
 
+    has_gains = (
+        args.photometric_gains
+        is not None
+    )
+
+    has_field = (
+        args.photometric_field
+        is not None
+    )
+
+    if has_gains != has_field:
+        raise RuntimeError(
+            "--photometric-gains and "
+            "--photometric-field must "
+            "be supplied together."
+        )
+
+    image_preprocessor = None
+
+    if has_gains and has_field:
+        calibration = (
+            load_photometric_calibration(
+                args.photometric_gains,
+                args.photometric_field,
+                max_field_correction=(
+                    args.max_field_correction
+                ),
+            )
+        )
+
+        def image_preprocessor(
+            image_name: str,
+            image,
+        ):
+            return (
+                apply_photometric_calibration(
+                    image_name,
+                    image,
+                    calibration,
+                )
+            )
+
+        print(
+            "Photometric standardization: ON"
+        )
+
+        print(
+            "Maximum spatial correction: "
+            f"{args.max_field_correction:.2f}x"
+        )
+
+    else:
+        print(
+            "Photometric standardization: OFF"
+        )
+
+    print(
+        f"Blend mode: {args.blend_mode}"
+    )
+
+    if args.blend_mode == "feather":
+        print(
+            "Feather fraction: "
+            f"{args.feather_fraction:.2f}"
+        )
+
+        print(
+            "Minimum feather weight: "
+            f"{args.minimum_feather_weight:.2f}"
+        )
+
     result = render_average_mosaic(
         image_paths,
         layout,
         render_scale=args.render_scale,
         padding_px=args.padding,
+        image_preprocessor=(
+            image_preprocessor
+        ),
+        blend_mode=args.blend_mode,
+        feather_fraction=(
+            args.feather_fraction
+        ),
+        minimum_feather_weight=(
+            args.minimum_feather_weight
+        ),
     )
 
     args.output.parent.mkdir(
