@@ -19,6 +19,7 @@ venv/
 
 # Generated project output
 outputs/
+outputs_*/
 
 # Private / research data
 data/
