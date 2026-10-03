@@ -16,6 +16,12 @@ from thin_section_stitcher.photometric import (
     apply_photometric_calibration,
     load_photometric_calibration,
 )
+from thin_section_stitcher.photometric_flatfield import (
+    correct_image_flatfield,
+)
+from thin_section_stitcher.photometric_masking import (
+    build_content_mask,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -114,6 +120,33 @@ def parse_args() -> argparse.Namespace:
         default=0.05,
     )
 
+    parser.add_argument(
+        "--flatfield",
+        action="store_true",
+        help=(
+            "Apply conservative per-image luminance "
+            "flat-field correction before rendering."
+        ),
+    )
+
+    parser.add_argument(
+        "--flatfield-sigma",
+        type=float,
+        default=30.0,
+    )
+
+    parser.add_argument(
+        "--flatfield-min-correction",
+        type=float,
+        default=0.95,
+    )
+
+    parser.add_argument(
+        "--flatfield-max-correction",
+        type=float,
+        default=1.06,
+    )
+
     return parser.parse_args()
 
 
@@ -163,9 +196,71 @@ def main() -> None:
             "be supplied together."
         )
 
+    if args.flatfield and has_gains:
+        raise RuntimeError(
+            "Do not combine --flatfield with the "
+            "global photometric calibration during "
+            "this experiment."
+        )
+
     image_preprocessor = None
 
-    if has_gains and has_field:
+    if args.flatfield:
+        def image_preprocessor(
+                image_name: str,
+                image,
+        ):
+            del image_name
+
+            mask = build_content_mask(
+                image
+            )
+
+            (
+                corrected,
+                _field,
+                _correction,
+                _support,
+            ) = correct_image_flatfield(
+                image,
+                mask,
+                downsample_factor=8,
+                blur_sigma_small=(
+                    args.flatfield_sigma
+                ),
+                min_support=0.05,
+                full_support=0.50,
+                min_correction=(
+                    args.flatfield_min_correction
+                ),
+                max_correction=(
+                    args.flatfield_max_correction
+                ),
+            )
+
+            return corrected
+
+        print(
+            "Photometric standardization: OFF"
+        )
+
+        print(
+            "Per-image flat-field correction: ON"
+        )
+
+        print(
+            "Flat-field correction range: "
+            f"{args.flatfield_min_correction:.2f}x"
+            " -> "
+            f"{args.flatfield_max_correction:.2f}x"
+        )
+
+        print(
+            "Flat-field sigma: "
+            f"{args.flatfield_sigma:.1f}"
+        )
+
+    elif has_gains and has_field:
         calibration = (
             load_photometric_calibration(
                 args.photometric_gains,
@@ -200,6 +295,10 @@ def main() -> None:
     else:
         print(
             "Photometric standardization: OFF"
+        )
+
+        print(
+            "Per-image flat-field correction: OFF"
         )
 
     print(
