@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import networkx as nx
 import numpy as np
 import pandas as pd
 
@@ -72,6 +73,17 @@ def parse_args() -> argparse.Namespace:
         "--root",
         type=str,
         default="60.jpg",
+    )
+
+    parser.add_argument(
+        "--include-medium",
+        action="store_true",
+    )
+
+    parser.add_argument(
+        "--validated-bridges",
+        type=Path,
+        default=None,
     )
 
     return parser.parse_args()
@@ -168,17 +180,53 @@ def main() -> None:
         consistency
     )
 
+    confidence_levels = {"high"}
+
+    if args.include_medium:
+        confidence_levels.add("medium")
+
     trusted_edges = edges[
-        (
-            edges["confidence"]
-            == "high"
+        edges["confidence"].isin(confidence_levels)
+        & ~edges["consistency_warning"]
+        ].copy()
+
+    if args.validated_bridges is not None:
+        bridges = pd.read_csv(
+            args.validated_bridges
         )
-        & (
-            ~edges[
-                "consistency_warning"
-            ]
+
+        bridge_edges = pd.DataFrame(
+            {
+                "image_a": bridges["image_a"],
+                "image_b": bridges["image_b"],
+                "inlier_ratio_verification": (
+                    bridges["inlier_ratio"]
+                ),
+            }
         )
-    ].copy()
+
+        existing_pairs = {
+            frozenset((row.image_a, row.image_b))
+            for row in trusted_edges.itertuples()
+        }
+
+        bridge_edges = bridge_edges[
+            ~bridge_edges.apply(
+                lambda row: frozenset(
+                    (row["image_a"], row["image_b"])
+                ) in existing_pairs,
+                axis=1,
+            )
+        ]
+
+        trusted_edges = pd.concat(
+            [
+                trusted_edges,
+                bridge_edges,
+            ],
+            ignore_index=True,
+            sort=False,
+        )
 
     print("=" * 72)
     print("PHOTOMETRIC STANDARDIZATION ESTIMATION")
@@ -197,6 +245,40 @@ def main() -> None:
         f"Estimation scale: "
         f"{args.scale:.3f}"
     )
+
+    photometric_graph = nx.Graph()
+
+    photometric_graph.add_nodes_from(
+        path.name
+        for path in image_paths
+    )
+
+    photometric_graph.add_edges_from(
+        (
+            str(row["image_a"]),
+            str(row["image_b"]),
+        )
+        for row in trusted_edges.to_dict(
+            orient="records"
+        )
+    )
+
+    if not nx.is_connected(
+            photometric_graph
+    ):
+        components = sorted(
+            nx.connected_components(
+                photometric_graph
+            ),
+            key=len,
+            reverse=True,
+        )
+
+        raise RuntimeError(
+            "Photometric overlap graph is not connected. "
+            f"Component sizes: "
+            f"{[len(component) for component in components]}"
+        )
 
     result = estimate_photometric_gains(
         image_paths,

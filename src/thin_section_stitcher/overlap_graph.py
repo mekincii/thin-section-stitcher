@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from math import isclose
 from pathlib import Path
 
 import networkx as nx
@@ -117,6 +118,95 @@ def build_overlap_graph(
         )
 
     return graph
+
+
+def add_validated_bridges(
+    graph: nx.Graph,
+    bridges: pd.DataFrame,
+    expected_image_scale: float = 0.75,
+) -> nx.Graph:
+    """
+    Add explicitly validated low-overlap bridge edges.
+
+    These edges are not accepted by the normal automatic confidence
+    thresholds. They must have been independently reviewed and stored
+    in a validated-bridge table with their measured geometry.
+    """
+    required_columns = {
+        "image_a",
+        "image_b",
+        "inliers",
+        "inlier_ratio",
+        "dx",
+        "dy",
+        "rotation_deg",
+        "scale",
+        "verification_scale",
+        "reason",
+    }
+
+    missing = required_columns - set(bridges.columns)
+
+    if missing:
+        raise ValueError(
+            "Validated bridge table is missing columns: "
+            + ", ".join(sorted(missing))
+        )
+
+    result = graph.copy()
+
+    for row in bridges.to_dict(orient="records"):
+        image_a = str(row["image_a"])
+        image_b = str(row["image_b"])
+
+        if image_a not in result:
+            raise ValueError(
+                f"Validated bridge references unknown image: {image_a}"
+            )
+
+        if image_b not in result:
+            raise ValueError(
+                f"Validated bridge references unknown image: {image_b}"
+            )
+
+        verification_scale = float(
+            row["verification_scale"]
+        )
+
+        if not isclose(
+            verification_scale,
+            expected_image_scale,
+            rel_tol=0.0,
+            abs_tol=1e-9,
+        ):
+            raise ValueError(
+                f"Validated bridge {image_a} <-> {image_b} "
+                f"uses scale {verification_scale}, expected "
+                f"{expected_image_scale}."
+            )
+
+        # Never replace a stronger automatically accepted edge.
+        if result.has_edge(image_a, image_b):
+            continue
+
+        result.add_edge(
+            image_a,
+            image_b,
+            confidence="validated",
+            source="validated_bridge",
+            inliers=int(row["inliers"]),
+            inlier_ratio=float(row["inlier_ratio"]),
+            dx=float(row["dx"]),
+            dy=float(row["dy"]),
+            rotation_deg=float(row["rotation_deg"]),
+            scale=float(row["scale"]),
+            image_a=image_a,
+            image_b=image_b,
+            verification_scale=verification_scale,
+            reason=str(row["reason"]),
+        )
+
+    return result
 
 
 def graph_summary(

@@ -8,6 +8,7 @@ import pandas as pd
 
 from thin_section_stitcher.dataset import discover_images
 from thin_section_stitcher.overlap_graph import (
+    add_validated_bridges,
     build_overlap_graph,
     graph_summary,
     prepare_overlap_edges,
@@ -44,6 +45,16 @@ def parse_args() -> argparse.Namespace:
         "--graph-output",
         type=Path,
         default=Path("outputs/overlap_graph.graphml"),
+    )
+
+    parser.add_argument(
+        "--validated-bridges",
+        type=Path,
+        default=None,
+        help=(
+            "Optional CSV containing explicitly validated "
+            "low-overlap bridge edges."
+        ),
     )
 
     return parser.parse_args()
@@ -139,6 +150,19 @@ def main() -> None:
         exclude_warnings=True,
     )
 
+    layout_graph = trusted_graph
+
+    if args.validated_bridges is not None:
+        bridges = pd.read_csv(
+            args.validated_bridges
+        )
+
+        layout_graph = add_validated_bridges(
+            trusted_graph,
+            bridges,
+            expected_image_scale=0.75,
+        )
+
     print_summary(
         "HIGH-CONFIDENCE GRAPH",
         high_graph,
@@ -149,8 +173,14 @@ def main() -> None:
         trusted_graph,
     )
 
+    if args.validated_bridges is not None:
+        print_summary(
+            "TRUSTED + VALIDATED BRIDGES GRAPH",
+            layout_graph,
+        )
+
     components = sorted(
-        nx.connected_components(trusted_graph),
+        nx.connected_components(layout_graph),
         key=len,
         reverse=True,
     )
@@ -168,7 +198,7 @@ def main() -> None:
         [
             {
                 "image": node,
-                "degree": trusted_graph.degree(node),
+                "degree": layout_graph.degree(node),
             }
             for node in trusted_graph.nodes
         ]
@@ -196,7 +226,7 @@ def main() -> None:
     )
 
     save_graph(
-        trusted_graph,
+        layout_graph,
         args.graph_output,
     )
 

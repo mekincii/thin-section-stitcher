@@ -18,6 +18,7 @@ from thin_section_stitcher.layout import (
     relative_transform,
 )
 from thin_section_stitcher.overlap_graph import (
+    add_validated_bridges,
     build_overlap_graph,
     prepare_overlap_edges,
 )
@@ -55,6 +56,17 @@ def parse_args() -> argparse.Namespace:
             "Optional saved global layout. "
             "If omitted, analyze the spanning-tree initialization."
         ),
+    )
+
+    parser.add_argument(
+        "--include-medium",
+        action="store_true",
+    )
+
+    parser.add_argument(
+        "--validated-bridges",
+        type=Path,
+        default=None,
     )
 
     return parser.parse_args()
@@ -166,12 +178,33 @@ def main() -> None:
         consistency
     )
 
+    confidence_levels = {"high"}
+
+    if args.include_medium:
+        confidence_levels.add("medium")
+
     graph = build_overlap_graph(
         image_names,
         edges,
-        confidence_levels={"high"},
+        confidence_levels=confidence_levels,
         exclude_warnings=True,
     )
+
+    if args.validated_bridges is not None:
+        bridges = pd.read_csv(
+            args.validated_bridges
+        )
+
+        graph = add_validated_bridges(
+            graph,
+            bridges,
+            expected_image_scale=VERIFICATION_SCALE,
+        )
+
+    if not nx.is_connected(graph):
+        raise RuntimeError(
+            "Layout overlap graph must be connected."
+        )
 
     if not nx.is_connected(graph):
         raise RuntimeError(
